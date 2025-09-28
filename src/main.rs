@@ -1,12 +1,31 @@
 use std::{convert::Infallible, net::SocketAddr};
 
 use hyper::{Request, Response, body::Bytes, server::conn::http2, service::service_fn};
+use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
 
-use http_body_util::Full;
+use http_body_util::{BodyExt, Full, combinators::BoxBody};
 
 async fn hello(_: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
     Ok(Response::new(Full::new(Bytes::from("Hello, World!"))))
+}
+
+async fn map_endpoint(
+    req: Request<hyper::body::Incoming>,
+) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
+    match (req.method(), req.uri().path()) {
+        (&hyper::Method::GET, "/api/v1/:slug") => Ok(),
+        (&hyper::Method::GET, "/api/v1/info/:slug") => Ok(),
+        (&hyper::Method::POST, "/api/v1/shorten") => Ok(),
+        (&hyper::Method::DELETE, "/api/v1/:slug") => Ok(),
+
+        _ => {
+            let body = Full::new(Bytes::from("Not Found"));
+            let mut response = Response::new(body.boxed());
+            *response.status_mut() = hyper::StatusCode::NOT_FOUND;
+            Ok(response)
+        }
+    }
 }
 
 #[derive(Clone)]

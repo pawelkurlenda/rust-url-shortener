@@ -1,0 +1,20 @@
+@url = http://127.0.0.1:3000
+
+###
+GET {{url}}/health
+
+###
+GET {{url}}//api/v1/:slug
+
+###
+DELETE {{url}}//api/v1/:slug
+
+###
+PUT {{url}}/api/v1/shorten
+Content-Type: application/json
+
+{
+  "url": "test value",
+  "custom_alias": null
+  "ttl_seconds": "1000"
+}

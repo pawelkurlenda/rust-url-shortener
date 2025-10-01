@@ -1,11 +1,15 @@
-use std::net::SocketAddr;
+use std::{net::SocketAddr, sync::Arc};
 
-use hyper::{server::conn::http2, service::service_fn};
+use hyper::{Request, body::Body, server::conn::http2, service::service_fn};
 use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
 
+use crate::routes::App;
+
+use crate::MemoryStore;
+use crate::store::Store;
+
 mod routes;
-use crate::routes::map_endpoint;
 
 #[derive(Clone)]
 // An Executor that uses the tokio runtime.
@@ -29,23 +33,28 @@ where
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
 
-    // We create a TcpListener and bind it to 127.0.0.1:3000
     let listener = TcpListener::bind(addr).await?;
 
-    // We start a loop to continuously accept incoming connections
+    let app = App {
+        store: Arc::new(MemoryStore::default()),
+    };
+
     loop {
         let (stream, _) = listener.accept().await?;
 
-        // Use an adapter to access something implementing `tokio::io` traits as if they implement
-        // `hyper::rt` IO traits.
         let io = TokioIo::new(stream);
 
-        // Spawn a tokio task to serve multiple connections concurrently
+        let app_clone = app.clone();
+
         tokio::task::spawn(async move {
-            // Handle the connection from the client using HTTP/2 with an executor and pass any
-            // HTTP requests received on that connection to the `hello` function
             if let Err(err) = http2::Builder::new(TokioExecutor)
-                .serve_connection(io, service_fn(map_endpoint))
+                .serve_connection(
+                    io,
+                    service_fn(move |req: Request<Body>| {
+                        let app = app_clone.clone();
+                        async move { app.route(req).await }
+                    }),
+                )
                 .await
             {
                 eprintln!("Error serving connection: {}", err);

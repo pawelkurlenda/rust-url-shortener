@@ -4,12 +4,10 @@ use hyper::{Request, body::Body, server::conn::http2, service::service_fn};
 use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
 
-use crate::routes::App;
-
-use crate::MemoryStore;
-use crate::store::Store;
+use crate::{routes::App, store::MemoryStore};
 
 mod routes;
+mod store;
 
 #[derive(Clone)]
 // An Executor that uses the tokio runtime.

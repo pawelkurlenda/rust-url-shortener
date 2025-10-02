@@ -3,8 +3,10 @@ use std::sync::Arc;
 use http_body_util::{BodyExt, Full};
 use hyper::{
     Request, Response,
-    body::{Body, Bytes},
+    body::{Body, Bytes, Incoming},
 };
+
+use crate::store::Store;
 
 pub struct App<S: Store> {
     pub store: Arc<S>,
@@ -19,7 +21,7 @@ impl<S: Store> Clone for App<S> {
 }
 
 impl<S: Store> App<S> {
-    pub async fn route(self, req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
+    pub async fn route(self, req: Request<Incoming>) -> Result<Response<Incoming>, hyper::Error> {
         let method = req.method().clone();
         let path = req.uri().path().to_string();
 

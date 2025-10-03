@@ -4,8 +4,9 @@ use hyper::{Request, body::Body, server::conn::http2, service::service_fn};
 use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
 
-use crate::{routes::App, store::MemoryStore};
+use crate::{routes::App, store::memory::MemoryStore};
 
+mod models;
 mod routes;
 mod store;
 

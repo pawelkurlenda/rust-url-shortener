@@ -6,6 +6,7 @@ use tokio::net::TcpListener;
 
 use crate::{routes::App, store::memory::MemoryStore};
 
+mod handlers;
 mod models;
 mod routes;
 mod store;

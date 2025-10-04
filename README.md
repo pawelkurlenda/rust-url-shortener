@@ -29,3 +29,41 @@
 * `DELETE /api/v1/{slug}`
 
 ## Data flow
+```mermaid
+%%{init: {"themeVariables": {
+  "primaryColor": "#fef3c7",
+  "primaryBorderColor": "#f59e0b",
+  "primaryTextColor": "#374151",
+  "lineColor": "#9ca3af",
+  "fontFamily": "Comic Sans MS, Marker Felt, cursive"
+}}}%%
+graph LR
+    subgraph Client
+        U([Browser / CLI / API consumer])
+    end
+
+    subgraph Server
+        A([Axum Web Server])
+        B([Slug Generator])
+        C([Redirect Handler])
+    end
+
+    subgraph Storage
+        D([SQLite / Postgres])
+        E([Redis Cache])
+    end
+
+    subgraph Optional
+        F([Analytics Service])
+        G([Admin Dashboard])
+    end
+
+    U --> A
+    A --> B
+    A --> C
+    B --> D
+    C --> D
+    C --> E
+    A --> F
+    A --> G
+```

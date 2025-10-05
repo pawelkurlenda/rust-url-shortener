@@ -1,6 +1,6 @@
 use std::{net::SocketAddr, sync::Arc};
 
-use hyper::{Request, body::Body, server::conn::http2, service::service_fn};
+use hyper::{Request, body::Incoming, server::conn::http2, service::service_fn};
 use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
 
@@ -50,7 +50,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             if let Err(err) = http2::Builder::new(TokioExecutor)
                 .serve_connection(
                     io,
-                    service_fn(move |req: Request<Body>| {
+                    service_fn(move |req: Request<Incoming>| {
                         let app = app_clone.clone();
                         async move { app.route(req).await }
                     }),

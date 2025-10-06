@@ -31,11 +31,8 @@ impl Store for MemoryStore {
         Ok(())
     }
 
-    async fn incr_hit(&self, id: &str) -> anyhow::Result<u64> {
-        if let Some(r) = self.map.write().await.get_mut(id) {
-            r.hits += 1;
-        }
-        Ok(0)
+    async fn get_hits(&self, id: &str) -> anyhow::Result<u64> {
+        Ok(*self.hits.read().await.get(id).unwrap_or(&0))
     }
 
     // async fn purge_expired(&self, now: OffsetDateTime) -> anyhow::Result<usize> {

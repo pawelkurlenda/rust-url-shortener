@@ -20,13 +20,16 @@ impl Store for MemoryStore {
         Ok(())
     }
 
-    async fn delete(&self, id: &str) -> anyhow::Result<bool> {
-        Ok(self.links.write().await.remove(id).is_some())
+    async fn delete(&self, id: &str) -> anyhow::Result<()> {
+        self.links.write().await.remove(id).is_some();
+        Ok(())
     }
 
     async fn incr_hit(&self, id: &str) -> anyhow::Result<()> {
-        if let Some(r) = self.links.write().await.get_mut(id) {
-            r.hits += 1;
+        if let Some(h) = self.hits.write().await.get_mut(id) {
+            *h += 1;
+        } else {
+            self.hits.write().await.insert(id.to_string(), 1);
         }
         Ok(())
     }

@@ -1,16 +1,13 @@
 use std::sync::Arc;
 
-use http_body_util::{BodyExt, Full};
+use http_body_util::Full;
 use hyper::{
     Method, Request, Response,
-    body::{Body, Bytes, Incoming},
+    body::{Bytes, Incoming},
 };
 
 use crate::{
-    handlers::{
-        self,
-        handlers::{create_shortened_url, delete_url_by_slug, get_url_by_slug},
-    },
+    handlers::handlers::{create_shortened_url, delete_url_by_slug, get_url_by_slug},
     store::store::Store,
 };
 
@@ -27,7 +24,7 @@ impl<S: Store> Clone for App<S> {
     }
 }
 
-type Resp = Response<Full<Bytes>>;
+pub type Resp = Response<Full<Bytes>>;
 
 impl<S: Store> App<S> {
     pub async fn route(self, req: Request<Incoming>) -> Result<Resp, hyper::Error> {

@@ -9,6 +9,7 @@ use crate::{routes::App, store::memory::MemoryStore};
 mod handlers;
 mod models;
 mod routes;
+mod shortener;
 mod store;
 
 #[derive(Clone)]

@@ -1,5 +1,5 @@
-use http_body_util::combinators::BoxBody;
-use hyper::{Request, Response, body::Incoming};
+use http_body_util::{combinators::BoxBody, BodyExt};
+use hyper::{body::{Buf, Bytes, Incoming}, header, Request, Response, StatusCode};
 
 use crate::{
     routes::{App, Resp},
@@ -61,4 +61,10 @@ pub async fn delete_url_by_slug<S: Store>(
         .header(header::CONTENT_TYPE, "application/json")
         .body(full(json))?;
     Ok(response)
+}
+
+fn full<T: Into<Bytes>>(chunk: T) -> BoxBody {
+    Full::new(chunk.into())
+        .map_err(|never| match never {})
+        .boxed()
 }

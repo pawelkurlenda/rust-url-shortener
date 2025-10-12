@@ -1,7 +1,9 @@
+use std::io::{Error, ErrorKind};
+
 use bytes::BytesMut;
 use http_body_util::{combinators::BoxBody, BodyExt, BodyStream};
 use hyper::{body::{Buf, Bytes, Incoming}, header, Request, Response, StatusCode};
-use tokio::stream;
+use validator::Validate;
 
 use crate::{
     routes::{App, Resp},
@@ -33,20 +35,7 @@ pub async fn create_shortened_url<S: Store>(
     app: App<S>,
     req: Request<Incoming>,
 ) -> Result<Resp, hyper::Error> {    
-    let mut body = req.body_mut();
-    let mut buf = BytesMut::with_capacity(1024);
-
-    while let Some(frame) = body.frame().await {
-        let frame = frame.map_err(|_| ())?;
-        if let Some(chunk) = frame.data_ref() {
-            // deny if size would exceed limit
-            if buf.len() + chunk.len() > MAX {
-                return Err(()); // 413
-            }
-            buf.extend_from_slice(chunk);
-        }
-    }
-    let a = buf.to_vec()
+    
 
     let whole_body = req.collect().await?.aggregate();
     let mut data: serde_json::Value = serde_json::from_reader(whole_body.reader())?;
@@ -88,4 +77,44 @@ fn full<T: Into<Bytes>>(chunk: T) -> BoxBody {
     Full::new(chunk.into())
         .map_err(|never| match never {})
         .boxed()
+}
+
+async fn get_body(req: &mut Request<Incoming>) -> Result<Vec<u8>, Error> {
+    //let mut body = req.body_mut();
+    let body = req.body_mut();
+    let mut buf = BytesMut::with_capacity(1024);
+
+    while let Some(frame) = body.frame().await {
+        let frame = frame.map_err(|_| anyhow::anyhow!("Failed to read frame"))?;
+        if let Some(chunk) = frame.data_ref() {
+            // deny if size would exceed limit
+            if buf.len() + chunk.len() > MAX {
+                //return Err(anyhow::anyhow!("Request body too large"));
+                return Err(Error::new(ErrorKind::InvalidInput, "Request body too large"));
+            }
+            buf.extend_from_slice(chunk);
+        }
+    }
+    Ok(buf.to_vec())
+}
+
+async fn parse_and_validate<T>(req: &mut Request<Incoming>) -> Result<T, Error>
+where
+    T: serde::de::DeserializeOwned + Validate,
+{
+    let bytes = match get_body(req).await {
+        Ok(b) => b,
+        Err(e) => return Err(e), // 500
+    };
+
+    let mut value: T = match serde_json::from_slice(&bytes) {
+        v => v,
+        Err(_) => return Err(anyhow::anyhow!("Failed to parse body")), // 400
+    };
+
+    if let Err(e) = value.validate() {
+        return Err(anyhow::anyhow!("Validation failed: {}", e));
+    }
+
+    Ok(value)
 }

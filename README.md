@@ -28,6 +28,17 @@
 * `GET /api/v1/info/{slug}`
 * `DELETE /api/v1/{slug}`
 
+## Max number of URLs
+| Short length     | Max number of URLs     |
+| ---------------- | ---------------------- |
+|           1      | 62 ^ 1 = 62            |
+|           2      | 62 ^ 2 = 3 844         |
+|           3      | 62 ^ 3 = 238 328       |
+|           4      | 62 ^ 4 = 14 776 336    |
+|           5      | 62 ^ 5 = 916 132 832   |
+|           6      | 62 ^ 6 = 56 800 235 584|
+|           7      | 62 ^ 7 = 35 521 614 606 208 = ~3.5 trillion            |
+
 ## Data flow
 ```mermaid
 %%{init: {"themeVariables": {

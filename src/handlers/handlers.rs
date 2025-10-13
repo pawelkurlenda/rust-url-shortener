@@ -6,8 +6,7 @@ use hyper::{body::{Buf, Bytes, Incoming}, header, Request, Response, StatusCode}
 use validator::Validate;
 
 use crate::{
-    routes::{App, Resp},
-    store::store::Store,
+    models::{LinkRecord, ShortenRequest}, routes::{App, Resp}, store::store::Store
 };
 
 const MAX: usize = 1024 * 16;
@@ -34,8 +33,27 @@ pub async fn get_url_by_slug<S: Store>(
 pub async fn create_shortened_url<S: Store>(
     app: App<S>,
     req: Request<Incoming>,
-) -> Result<Resp, hyper::Error> {    
+) -> Result<Resp, hyper::Error> {
+
+    let res = match parse_and_validate::<ShortenRequest>(&mut req).await{
+        Ok(r) => r,
+        Err(e) => {
+            let response = Response::builder()
+                .status(StatusCode::BAD_REQUEST)
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(full(format!(r#"{{"error": "{}"}}"#, e)))?;
+            return Ok(response);
+        }
+    };
     
+    let a = LinkRecord {
+        id: "test".to_string(),
+        target: res.url,
+        created_at: chrono::Utc::now(),
+        expires_at: res.expires_at,
+    };
+    
+    app.store.put(a).await.unwrap(); // handle error properly
 
     let whole_body = req.collect().await?.aggregate();
     let mut data: serde_json::Value = serde_json::from_reader(whole_body.reader())?;
@@ -80,16 +98,14 @@ fn full<T: Into<Bytes>>(chunk: T) -> BoxBody {
 }
 
 async fn get_body(req: &mut Request<Incoming>) -> Result<Vec<u8>, Error> {
-    //let mut body = req.body_mut();
     let body = req.body_mut();
     let mut buf = BytesMut::with_capacity(1024);
 
     while let Some(frame) = body.frame().await {
-        let frame = frame.map_err(|_| anyhow::anyhow!("Failed to read frame"))?;
+        let frame = frame.map_err(|_| Error::new(ErrorKind::InvalidInput, "Failed to read frame"))?;
         if let Some(chunk) = frame.data_ref() {
             // deny if size would exceed limit
             if buf.len() + chunk.len() > MAX {
-                //return Err(anyhow::anyhow!("Request body too large"));
                 return Err(Error::new(ErrorKind::InvalidInput, "Request body too large"));
             }
             buf.extend_from_slice(chunk);
@@ -107,13 +123,13 @@ where
         Err(e) => return Err(e), // 500
     };
 
-    let mut value: T = match serde_json::from_slice(&bytes) {
-        v => v,
-        Err(_) => return Err(anyhow::anyhow!("Failed to parse body")), // 400
+    let value: T = match serde_json::from_slice(&bytes) {
+        Ok(v) => v,
+        Err(e) => return Err(Error::new(ErrorKind::InvalidInput, format!("Failed to parse body: {}", e))), // 400
     };
 
     if let Err(e) = value.validate() {
-        return Err(anyhow::anyhow!("Validation failed: {}", e));
+        return Err(Error::new(ErrorKind::InvalidInput, format!("Validation failed: {}", e)));
     }
 
     Ok(value)

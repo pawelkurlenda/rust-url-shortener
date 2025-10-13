@@ -31,14 +31,30 @@ impl<S: Store> App<S> {
         let method = req.method();
         let path = req.uri().path();
 
-        match (method, path) {
-            (&Method::GET, "/api/v1/:slug") => get_url_by_slug(self, req).await,
-            (&Method::GET, "/api/v1/info/:slug") => get_url_by_slug(self, req).await,
-            (&Method::POST, "/api/v1/shorten") => create_shortened_url(self, req).await,
-            (&Method::DELETE, "/api/v1/:slug") => delete_url_by_slug(self, req).await,
-            (&Method::GET, "/health") => Ok(self.response_empty_ok()),
+        let response = match method {
+            &Method::GET => get_url_by_slug(self, req).await,
+            &Method::POST => create_shortened_url(self, req).await,
+            &Method::DELETE => {
+                if let Some(id) = self.get_id_from_path(path) {
+                    delete_url_by_slug(self, req).await
+                } else {
+                    Ok(self.response_not_found())
+                }
+                delete_url_by_slug(self, req).await
+            }
             _ => Ok(self.response_not_found()),
-        }
+        };
+
+        // match (method, path) {
+        //     (&Method::GET, "/api/v1/:slug") => get_url_by_slug(self, req).await,
+        //     (&Method::GET, "/api/v1/info/:slug") => get_url_by_slug(self, req).await,
+        //     (&Method::POST, "/api/v1/shorten") => create_shortened_url(self, req).await,
+        //     (&Method::DELETE, "/api/v1/:slug") => delete_url_by_slug(self, req).await,
+        //     (&Method::GET, "/health") => Ok(self.response_empty_ok()),
+        //     _ => Ok(self.response_not_found()),
+        // }
+
+        return response;
     }
 
     fn response_empty_ok(&self) -> Resp {
@@ -55,5 +71,14 @@ impl<S: Store> App<S> {
             .header("Content-Type", "application/json")
             .body(Full::new(Bytes::from("{\"error\":\"Not Found\"}")))
             .unwrap()
+    }
+
+    fn get_id_from_path(&self, path: &str) -> Option<String> {
+        let parts: Vec<&str> = path.split('/').collect();
+        if parts.len() >= 4 {
+            Some(parts[3].to_string())
+        } else {
+            None
+        }
     }
 }

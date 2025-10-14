@@ -6,7 +6,7 @@ use hyper::{body::{Buf, Bytes, Incoming}, header, Request, Response, StatusCode}
 use validator::Validate;
 
 use crate::{
-    models::{LinkRecord, ShortenRequest}, routes::{App, Resp}, store::store::Store
+    id, models::{LinkRecord, ShortenRequest}, routes::{App, Resp}, store::store::Store
 };
 
 const MAX: usize = 1024 * 16;
@@ -14,6 +14,7 @@ const MAX: usize = 1024 * 16;
 pub async fn get_url_by_slug<S: Store>(
     app: App<S>,
     req: Request<Incoming>,
+    id: String
 ) -> Result<Resp, hyper::Error> {
     let whole_body = req.collect().await?.aggregate();
     let mut data: serde_json::Value = serde_json::from_reader(whole_body.reader())?;
@@ -75,6 +76,7 @@ pub async fn create_shortened_url<S: Store>(
 pub async fn delete_url_by_slug<S: Store>(
     app: App<S>,
     req: Request<Incoming>,
+    id: String
 ) -> Result<Resp, hyper::Error> {
     // Aggregate the body...
     let whole_body = req.body()..collect().await?.aggregate();

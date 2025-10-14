@@ -31,16 +31,22 @@ impl<S: Store> App<S> {
         let method = req.method();
         let path = req.uri().path();
 
-        let response = match method {
-            &Method::GET => get_url_by_slug(self, req).await,
-            &Method::POST => create_shortened_url(self, req).await,
-            &Method::DELETE => {
+        let response = match (method, path) {
+            (&Method::GET, "/health") => Ok(self.response_empty_ok()),
+            (&Method::POST, "/api/shorten") => create_shortened_url(self, req).await,
+            (&Method::GET, p) if p.starts_with("/api/") => {
                 if let Some(id) = self.get_id_from_path(path) {
-                    delete_url_by_slug(self, req).await
+                    get_url_by_slug(self, req, id).await
                 } else {
                     Ok(self.response_not_found())
                 }
-                delete_url_by_slug(self, req).await
+            }
+            (&Method::DELETE, p) if p.starts_with("/api/") => {
+                if let Some(id) = self.get_id_from_path(path) {
+                    delete_url_by_slug(self, req, id).await
+                } else {
+                    Ok(self.response_not_found())
+                }
             }
             _ => Ok(self.response_not_found()),
         };

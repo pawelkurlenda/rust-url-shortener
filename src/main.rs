@@ -1,39 +1,15 @@
 use std::{net::SocketAddr, sync::Arc};
 
-use axum::Router;
-use hyper::{Request, body::Incoming, server::conn::http2, service::service_fn};
-use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
 
-use crate::{
-    routes::{App, AppState},
-    store::memory::MemoryStore,
-};
+use crate::{app_state::AppState, store::memory::MemoryStore};
 
 mod app_state;
 mod handlers;
 mod id;
 mod models;
-mod routes;
+mod router;
 mod store;
-
-#[derive(Clone)]
-// An Executor that uses the tokio runtime.
-pub struct TokioExecutor;
-
-// Implement the `hyper::rt::Executor` trait for `TokioExecutor` so that it can be used to spawn
-// tasks in the hyper runtime.
-// An Executor allows us to manage execution of tasks which can help us improve the efficiency and
-// scalability of the server.
-impl<F> hyper::rt::Executor<F> for TokioExecutor
-where
-    F: std::future::Future + Send + 'static,
-    F::Output: Send + 'static,
-{
-    fn execute(&self, fut: F) {
-        tokio::task::spawn(fut);
-    }
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -45,29 +21,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         store: Arc::new(MemoryStore::default()),
     };
 
-    let app_router = Router::new();
-    app_router.with_state(app.clone());
+    let app_router = router::build_router(app.clone());
 
-    loop {
-        let (stream, _) = listener.accept().await?;
+    axum::serve(listener, app_router).await.unwrap();
 
-        let io = TokioIo::new(stream);
+    // let config = axum_server::tls_rustls::RustlsConfig::from_pem_file(
+    //         Path::new(&cert_path),
+    //         Path::new(&key_path),
+    //     ).await?;
 
-        let app_clone = app.clone();
+    // axum_server::bind_rustls(addr, config);
 
-        tokio::task::spawn(async move {
-            if let Err(err) = http2::Builder::new(TokioExecutor)
-                .serve_connection(
-                    io,
-                    service_fn(move |req: Request<Incoming>| {
-                        let app = app_clone.clone();
-                        async move { app.route(req).await }
-                    }),
-                )
-                .await
-            {
-                eprintln!("Error serving connection: {}", err);
-            }
-        });
-    }
+    Ok(())
+
+    // loop {
+    //     let (stream, _) = listener.accept().await?;
+
+    //     let io = TokioIo::new(stream);
+
+    //     let app_clone = app.clone();
+
+    //     tokio::task::spawn(async move {
+    //         if let Err(err) = http2::Builder::new(TokioExecutor)
+    //             .serve_connection(
+    //                 io,
+    //                 service_fn(move |req: Request<Incoming>| {
+    //                     let app = app_clone.clone();
+    //                     async move { app.route(req).await }
+    //                 }),
+    //             )
+    //             .await
+    //         {
+    //             eprintln!("Error serving connection: {}", err);
+    //         }
+    //     });
+    // }
 }

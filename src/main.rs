@@ -1,11 +1,16 @@
 use std::{net::SocketAddr, sync::Arc};
 
+use axum::Router;
 use hyper::{Request, body::Incoming, server::conn::http2, service::service_fn};
 use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
 
-use crate::{routes::App, store::memory::MemoryStore};
+use crate::{
+    routes::{App, AppState},
+    store::memory::MemoryStore,
+};
 
+mod app_state;
 mod handlers;
 mod id;
 mod models;
@@ -36,9 +41,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let listener = TcpListener::bind(addr).await?;
 
-    let app = App {
+    let app = AppState {
         store: Arc::new(MemoryStore::default()),
     };
+
+    let app_router = Router::new();
+    app_router.with_state(app.clone());
 
     loop {
         let (stream, _) = listener.accept().await?;

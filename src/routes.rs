@@ -11,22 +11,9 @@ use crate::{
     store::store::Store,
 };
 
-pub struct App<S: Store> {
-    pub store: Arc<S>,
-    //pub cuckoo_filter:
-}
-
-impl<S: Store> Clone for App<S> {
-    fn clone(&self) -> Self {
-        Self {
-            store: self.store.clone(),
-        }
-    }
-}
-
 pub type Resp = Response<Full<Bytes>>;
 
-impl<S: Store> App<S> {
+impl<S: Store> AppState<S> {
     pub async fn route(self, req: Request<Incoming>) -> Result<Resp, hyper::Error> {
         let method = req.method();
         let path = req.uri().path();
@@ -50,15 +37,6 @@ impl<S: Store> App<S> {
             }
             _ => Ok(self.response_not_found()),
         };
-
-        // match (method, path) {
-        //     (&Method::GET, "/api/v1/:slug") => get_url_by_slug(self, req).await,
-        //     (&Method::GET, "/api/v1/info/:slug") => get_url_by_slug(self, req).await,
-        //     (&Method::POST, "/api/v1/shorten") => create_shortened_url(self, req).await,
-        //     (&Method::DELETE, "/api/v1/:slug") => delete_url_by_slug(self, req).await,
-        //     (&Method::GET, "/health") => Ok(self.response_empty_ok()),
-        //     _ => Ok(self.response_not_found()),
-        // }
 
         return response;
     }

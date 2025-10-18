@@ -2,9 +2,11 @@ use std::{net::SocketAddr, sync::Arc};
 
 use tokio::net::TcpListener;
 
-use crate::{app_state::AppState, store::memory::MemoryStore};
+use crate::{app_state::AppState, cuckoo_filter::CuckooFilter, store::memory::MemoryStore};
 
+mod api_error;
 mod app_state;
+mod cuckoo_filter;
 mod handlers;
 mod id;
 mod models;
@@ -19,9 +21,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let app = AppState {
         store: Arc::new(MemoryStore::default()),
+        cuckoo_filter: Arc::new(CuckooFilter::new(1024)),
     };
 
-    let app_router = router::build_router(app.clone());
+    let app_router = router::build_router(app);
 
     axum::serve(listener, app_router).await.unwrap();
 
@@ -33,27 +36,4 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // axum_server::bind_rustls(addr, config);
 
     Ok(())
-
-    // loop {
-    //     let (stream, _) = listener.accept().await?;
-
-    //     let io = TokioIo::new(stream);
-
-    //     let app_clone = app.clone();
-
-    //     tokio::task::spawn(async move {
-    //         if let Err(err) = http2::Builder::new(TokioExecutor)
-    //             .serve_connection(
-    //                 io,
-    //                 service_fn(move |req: Request<Incoming>| {
-    //                     let app = app_clone.clone();
-    //                     async move { app.route(req).await }
-    //                 }),
-    //             )
-    //             .await
-    //         {
-    //             eprintln!("Error serving connection: {}", err);
-    //         }
-    //     });
-    // }
 }

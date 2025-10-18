@@ -1,3 +1,5 @@
+use std::hash::DefaultHasher;
+
 pub struct CuckooFilter {
     hasher: DefaultHasher,
     array_size: u64,

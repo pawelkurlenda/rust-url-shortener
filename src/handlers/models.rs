@@ -1,9 +1,9 @@
+use crate::app_settings::settings;
 use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationError};
 
 fn validate_custom_alias(alias: &str) -> Result<(), ValidationError> {
-    Ok(())
     // let good = (3..=64).contains(&alias.len())
     //     && alias
     //         .chars()
@@ -13,6 +13,9 @@ fn validate_custom_alias(alias: &str) -> Result<(), ValidationError> {
     // } else {
     //     Err(ValidationError::new("bad_alias"))
     // }
+    let a = settings::max_shortened_len();
+
+    Ok(())
 }
 
 fn validate_expiration_date(date: &DateTime<chrono::Utc>) -> Result<(), ValidationError> {

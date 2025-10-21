@@ -13,6 +13,7 @@ mod id;
 mod models;
 mod router;
 mod store;
+use app_settings::settings;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {

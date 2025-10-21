@@ -5,6 +5,7 @@ use tokio::net::TcpListener;
 use crate::{app_state::AppState, cuckoo_filter::CuckooFilter, store::memory::MemoryStore};
 
 mod api_error;
+mod app_settings;
 mod app_state;
 mod cuckoo_filter;
 mod handlers;

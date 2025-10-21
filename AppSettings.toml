@@ -1,0 +1,3 @@
+# App configuration
+port = 8080
+max_shortened_len = 6

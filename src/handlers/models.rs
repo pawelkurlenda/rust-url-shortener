@@ -4,21 +4,18 @@ use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationError};
 
 fn validate_custom_alias(alias: &str) -> Result<(), ValidationError> {
-    // let good = (3..=64).contains(&alias.len())
-    //     && alias
-    //         .chars()
-    //         .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
-    // if good {
-    //     Ok(())
-    // } else {
-    //     Err(ValidationError::new("bad_alias"))
-    // }
-    let a = settings::max_shortened_len();
+    if alias.len() != settings::max_shortened_len() {
+        return Err(ValidationError::new("bad_alias_length"));
+    }
 
     Ok(())
 }
 
 fn validate_expiration_date(date: &DateTime<chrono::Utc>) -> Result<(), ValidationError> {
+    if date <= &chrono::Utc::now() {
+        return Err(ValidationError::new("expiration_in_past"));
+    }
+
     Ok(())
 }
 

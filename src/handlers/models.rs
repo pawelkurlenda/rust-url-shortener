@@ -8,6 +8,10 @@ fn validate_custom_alias(alias: &str) -> Result<(), ValidationError> {
         return Err(ValidationError::new("bad_alias_length"));
     }
 
+    if alias.chars().any(|c| !c.is_ascii_alphanumeric()) {
+        return Err(ValidationError::new("bad_alias_chars"));
+    }
+
     Ok(())
 }
 

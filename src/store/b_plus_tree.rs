@@ -3,6 +3,8 @@ use std::{collections::HashMap, hash::Hash, path::{Path, PathBuf}, sync::{Arc, M
 use serde::{Deserialize, Serialize};
 use tokio::{fs::File, sync::RwLock};
 
+use crate::store::store::Store;
+
 const WAL_FILE: &str = "wal.log";
 type NodeId = u64;
 
@@ -34,6 +36,9 @@ impl BPlusTreeStore {
             tree: RwLock::new(tree),
         })
     }
+}
+
+impl Store for BPlusTreeStore {
 }
 
 pub struct BPlusTree {

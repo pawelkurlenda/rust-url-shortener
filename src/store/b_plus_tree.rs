@@ -3,7 +3,7 @@ use std::{collections::HashMap, hash::Hash, path::{Path, PathBuf}, sync::{Arc, M
 use serde::{Deserialize, Serialize};
 use tokio::{fs::File, sync::RwLock};
 
-use crate::store::store::Store;
+use crate::{models::LinkRecord, store::store::Store};
 
 const WAL_FILE: &str = "wal.log";
 type NodeId = u64;
@@ -39,6 +39,30 @@ impl BPlusTreeStore {
 }
 
 impl Store for BPlusTreeStore {
+    async fn get(&self, id: &str) -> anyhow::Result<Option<LinkRecord>> {
+        // Implementation goes here
+        Ok(None)
+    }
+
+    async fn put(&self, record: LinkRecord) -> anyhow::Result<()> {
+        // Implementation goes here
+        Ok(())
+    }
+
+    async fn delete(&self, id: &str) -> anyhow::Result<()>{
+        // Implementation goes here
+        Ok(())
+    }
+
+    async fn incr_hit(&self, id: &str) -> anyhow::Result<()> {
+        // Implementation goes here
+        Ok(())
+    }
+
+    async fn get_hits(&self, id: &str) -> anyhow::Result<u64> {
+        // Implementation goes here
+        Ok(0)
+    }
 }
 
 pub struct BPlusTree {

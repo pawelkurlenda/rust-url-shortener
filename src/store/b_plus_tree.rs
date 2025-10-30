@@ -1,5 +1,6 @@
 use std::{collections::HashMap, hash::Hash, path::{Path, PathBuf}, sync::{Arc, Mutex}};
 
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::{fs::File, sync::RwLock};
 
@@ -38,9 +39,14 @@ impl BPlusTreeStore {
     }
 }
 
+#[async_trait]
 impl Store for BPlusTreeStore {
     async fn get(&self, id: &str) -> anyhow::Result<Option<LinkRecord>> {
-        // Implementation goes here
+        let key = ns_link_v1(id);
+        if let Some(v) = self.tree.read().get(&key) {
+            
+        }
+
         Ok(None)
     }
 
@@ -65,9 +71,25 @@ impl Store for BPlusTreeStore {
     }
 }
 
-pub struct BPlusTree {
+fn ns_link_v1(id: &str) -> Vec<u8> {
+    let mut v = b"L:".to_vec();
+    v.extend_from_slice(id.as_bytes());
+    v
+}
+
+fn ns_link_v2(id: &str) -> Vec<u8> {
+    let mut v = Vec::with_capacity(2 + id.len());
+    v.extend_from_slice(b"L:");
+    v.extend_from_slice(id.as_bytes());
+    v
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+struct BpTree {
+    order: usize,
     root: NodeId,
-    nodes: HashMap<NodeId, Node>,
+    next_id: NodeId,
+    nodes: std::collections::HashMap<NodeId, Node>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

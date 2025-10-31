@@ -1,4 +1,9 @@
-use std::{collections::HashMap, hash::Hash, path::{Path, PathBuf}, sync::{Arc, Mutex}};
+use std::{
+    collections::HashMap,
+    hash::Hash,
+    path::{Path, PathBuf},
+    sync::{Arc, Mutex},
+};
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -43,9 +48,7 @@ impl BPlusTreeStore {
 impl Store for BPlusTreeStore {
     async fn get(&self, id: &str) -> anyhow::Result<Option<LinkRecord>> {
         let key = ns_link_v1(id);
-        if let Some(v) = self.tree.read().get(&key) {
-            
-        }
+        if let Some(v) = self.tree.read().get(&key) {}
 
         Ok(None)
     }
@@ -55,7 +58,7 @@ impl Store for BPlusTreeStore {
         Ok(())
     }
 
-    async fn delete(&self, id: &str) -> anyhow::Result<()>{
+    async fn delete(&self, id: &str) -> anyhow::Result<()> {
         // Implementation goes here
         Ok(())
     }
@@ -84,15 +87,7 @@ fn ns_link_v2(id: &str) -> Vec<u8> {
     v
 }
 
-#[derive(Serialize, Deserialize, Clone)]
-struct BpTree {
-    order: usize,
-    root: NodeId,
-    next_id: NodeId,
-    nodes: std::collections::HashMap<NodeId, Node>,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 enum Node {
     Internal {
         keys: Vec<Vec<u8>>,
@@ -105,12 +100,56 @@ enum Node {
     },
 }
 
-struct Internal<K: Ord + Clone, V, const B: usize> {
-    keys: Vec<K>,.
-    children: Vec<Box<Node<K, V, B>>>,
+#[derive(Serialize, Deserialize, Clone)]
+struct BpTree {
+    order: usize,
+    root: NodeId,
+    next_id: NodeId,
+    nodes: std::collections::HashMap<NodeId, Node>,
 }
 
-struct Leaf<K: Ord + Clone, V, const B: usize> {
-    keys: Vec<K>,
-    values: Vec<V>,
+impl BpTree {
+    fn new(order: usize) -> Self {
+        let root = 0;
+        let mut nodes = HashMap::new();
+        nodes.insert(
+            root,
+            Node::Leaf {
+                keys: Vec::new(),
+                vals: Vec::new(),
+                next: None,
+            },
+        );
+        Self {
+            order,
+            root,
+            next_id: 1,
+            nodes,
+        }
+    }
+
+    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+        let mut current_node_id = self.root;
+        loop {
+            let node = self.nodes.get(&current_node_id)?;
+            match node {
+                Node::Internal { keys, children } => {
+                    let mut i = 0;
+                    while i < keys.len() && key >= &keys[i][..] {
+                        i += 1;
+                    }
+                    current_node_id = children[i];
+                }
+                Node::Leaf { keys, vals, .. } => {
+                    for (i, k) in keys.iter().enumerate() {
+                        //if k == key {
+                        if k.as_slice() == key {
+                            return Some(vals[i].clone());
+                        }
+                    }
+                    return None;
+                }
+            }
+        }
+    }
 }

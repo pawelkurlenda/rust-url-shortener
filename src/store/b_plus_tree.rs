@@ -121,7 +121,7 @@ impl BpTree {
             },
         );
         Self {
-            order,
+            order: order.max(4),
             root,
             next_id: 1,
             nodes,
@@ -134,22 +134,44 @@ impl BpTree {
             let node = self.nodes.get(&current_node_id)?;
             match node {
                 Node::Internal { keys, children } => {
-                    let mut i = 0;
-                    while i < keys.len() && key >= &keys[i][..] {
-                        i += 1;
-                    }
+                    let idx = match keys.binary_search_by(|k| k.as_slice().cmp(key)) {
+                        Ok(i) => i + 1,
+                        Err(i) => i,
+                    };
+                    let i = idx.min(children.len() - 1);
                     current_node_id = children[i];
                 }
                 Node::Leaf { keys, vals, .. } => {
-                    for (i, k) in keys.iter().enumerate() {
-                        //if k == key {
-                        if k.as_slice() == key {
-                            return Some(vals[i].clone());
-                        }
+                    if let Ok(i) = keys.binary_search_by(|k| k.as_slice().cmp(key)) {
+                        let v = vals[i].clone();
+                        return if v.is_empty() { None } else { Some(v) };
+                    } else {
+                        return None;
                     }
-                    return None;
                 }
             }
         }
+    }
+
+    fn insert(&mut self, key: Vec<u8>, val: Vec<u8>) {
+        // Implementation goes here
+    }
+
+    fn alloc_leaf(
+        &mut self,
+        keys: Vec<Vec<u8>>,
+        vals: Vec<Vec<u8>>,
+        next: Option<NodeId>,
+    ) -> NodeId {
+        let id = self.next_id;
+        self.next_id += 1;
+        self.nodes.insert(id, Node::Leaf { keys, vals, next });
+        id
+    }
+    fn alloc_internal(&mut self, keys: Vec<Vec<u8>>, children: Vec<NodeId>) -> NodeId {
+        let id = self.next_id;
+        self.next_id += 1;
+        self.nodes.insert(id, Node::Internal { keys, children });
+        id
     }
 }

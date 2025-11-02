@@ -109,7 +109,7 @@ struct BpTree {
 }
 
 impl BpTree {
-    fn new(order: usize) -> Self {
+    pub fn new(order: usize) -> Self {
         let root = 0;
         let mut nodes = HashMap::new();
         nodes.insert(
@@ -128,7 +128,7 @@ impl BpTree {
         }
     }
 
-    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+    pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         let mut current_node_id = self.root;
         loop {
             let node = self.nodes.get(&current_node_id)?;
@@ -153,8 +153,62 @@ impl BpTree {
         }
     }
 
-    fn insert(&mut self, key: Vec<u8>, val: Vec<u8>) {
+    pub fn insert(&mut self, key: Vec<u8>, val: Vec<u8>) {
         // Implementation goes here
+    }
+
+    fn insert_rec(
+        &mut self,
+        node_id: NodeId,
+        key: Vec<u8>,
+        val: Vec<u8>,
+    ) -> Option<(Vec<u8>, NodeId)> {
+        match self.nodes.get_mut(&node_id).unwrap() {
+            Node::Leaf { keys, vals, next } => {
+                match keys.binary_search_by(|k| k.as_slice().cmp(&key)) {
+                    Ok(i) => {
+                        vals[i] = val;
+                        return None;
+                    }
+                    Err(i) => {
+                        keys.insert(i, key);
+                        vals.insert(i, val);
+                    }
+                }
+
+                if keys.len() > self.order {
+                    let mid = keys.len() / 2;
+                    let split_key = keys[mid].clone();
+                    let new_keys = keys.split_off(mid);
+                    let new_vals = vals.split_off(mid);
+                    let new_leaf_id = self.alloc_leaf(new_keys, new_vals, *next);
+                    *next = Some(new_leaf_id);
+                    return Some((split_key, new_leaf_id));
+                }
+            }
+            Node::Internal { keys, children } => {
+                let idx = match keys.binary_search_by(|k| k.as_slice().cmp(&key)) {
+                    Ok(i) => i + 1,
+                    Err(i) => i,
+                };
+                let i = idx.min(children.len() - 1);
+                if let Some((split_key, new_child_id)) = self.insert_rec(children[i], key, val) {
+                    keys.insert(i, split_key);
+                    children.insert(i + 1, new_child_id);
+
+                    if keys.len() > self.order {
+                        let mid = keys.len() / 2;
+                        let split_key = keys[mid].clone();
+                        let new_keys = keys.split_off(mid + 1);
+                        let new_children = children.split_off(mid + 1);
+                        let new_internal_id = self.alloc_internal(new_keys, new_children);
+                        return Some((split_key, new_internal_id));
+                    }
+                }
+            }
+        }
+
+        None
     }
 
     fn alloc_leaf(
@@ -168,6 +222,7 @@ impl BpTree {
         self.nodes.insert(id, Node::Leaf { keys, vals, next });
         id
     }
+
     fn alloc_internal(&mut self, keys: Vec<Vec<u8>>, children: Vec<NodeId>) -> NodeId {
         let id = self.next_id;
         self.next_id += 1;

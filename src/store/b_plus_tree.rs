@@ -1,3 +1,4 @@
+use core::str;
 use std::{
     collections::HashMap,
     hash::Hash,
@@ -18,7 +19,7 @@ pub struct BPlusTreeStore {
     dir: PathBuf,
     wal: Mutex<File>,
     last_id: Arc<RwLock<u64>>,
-    tree: RwLock<BPlusTree>,
+    tree: RwLock<BpTree>,
 }
 
 impl BPlusTreeStore {
@@ -31,7 +32,7 @@ impl BPlusTreeStore {
             .append(true)
             .open(wal_path)
             .await?;
-        let tree = BPlusTree {
+        let tree = BpTree {
             root: 0,
             nodes: HashMap::new(),
         };
@@ -98,7 +99,22 @@ enum Node {
         vals: Vec<Vec<u8>>,
         next: Option<u64>,
     },
+    // Internal(Internal),
+    // Leaf(Leaf),
 }
+
+// #[derive(Serialize, Deserialize, Clone, Debug)]
+// struct Internal {
+//     keys: Vec<Vec<u8>>,
+//     children: Vec<NodeId>,
+// }
+
+// #[derive(Serialize, Deserialize, Clone, Debug)]
+// struct Leaf {
+//     keys: Vec<Vec<u8>>,
+//     vals: Vec<Vec<u8>>,
+//     next: Option<NodeId>,
+// }
 
 #[derive(Serialize, Deserialize, Clone)]
 struct BpTree {
@@ -175,36 +191,48 @@ impl BpTree {
                         vals.insert(i, val);
                     }
                 }
-
                 if keys.len() > self.order {
                     let mid = keys.len() / 2;
-                    let split_key = keys[mid].clone();
-                    let new_keys = keys.split_off(mid);
-                    let new_vals = vals.split_off(mid);
-                    let new_leaf_id = self.alloc_leaf(new_keys, new_vals, *next);
-                    *next = Some(new_leaf_id);
-                    return Some((split_key, new_leaf_id));
+                    let right_keys = keys.split_off(mid);
+                    let right_vals = vals.split_off(mid);
+                    let sep = right_keys[0].clone();
+                    let right_id = self.alloc_leaf(right_keys, right_vals, None);
+                    if let Node::Leaf { next, .. } = self.nodes.get_mut(&node_id).unwrap() {
+                        let old = *next;
+                        *next = Some(right_id);
+                        if let Some(nn) = old {
+                            if let Node::Leaf { next: n2, .. } =
+                                self.nodes.get_mut(&right_id).unwrap()
+                            {
+                                *n2 = Some(nn);
+                            }
+                        }
+                    }
+                    return Some((sep, right_id));
                 }
+                return None;
             }
             Node::Internal { keys, children } => {
                 let idx = match keys.binary_search_by(|k| k.as_slice().cmp(&key)) {
                     Ok(i) => i + 1,
                     Err(i) => i,
                 };
-                let i = idx.min(children.len() - 1);
-                if let Some((split_key, new_child_id)) = self.insert_rec(children[i], key, val) {
-                    keys.insert(i, split_key);
-                    children.insert(i + 1, new_child_id);
-
+                let child = children[idx];
+                drop(keys);
+                drop(children);
+                if let Some((sep, right_id)) = self.insert_rec(child, key, val) {
+                    keys.insert(idx, sep);
+                    children.insert(idx + 1, right_id);
                     if keys.len() > self.order {
                         let mid = keys.len() / 2;
-                        let split_key = keys[mid].clone();
-                        let new_keys = keys.split_off(mid + 1);
-                        let new_children = children.split_off(mid + 1);
-                        let new_internal_id = self.alloc_internal(new_keys, new_children);
-                        return Some((split_key, new_internal_id));
+                        let sep_key = keys[mid].clone();
+                        let right_keys = keys.split_off(mid + 1);
+                        let right_children = children.split_off(mid + 1);
+                        let right_id2 = self.alloc_internal(right_keys, right_children);
+                        return Some((sep_key, right_id2));
                     }
                 }
+                return None;
             }
         }
 

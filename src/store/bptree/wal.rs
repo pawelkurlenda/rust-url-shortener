@@ -4,6 +4,7 @@ use std::{
     path::Path,
 };
 
+#[derive(Clone, Copy)]
 pub enum Operation {
     Insert,
     Delete,

@@ -22,4 +22,20 @@ impl Page {
             buf: [0u8; PAGE_SIZE],
         }
     }
+
+    pub fn read_kind(&self) -> PageKind {
+        match self.buf[8] {
+            1 => PageKind::Internal,
+            2 => PageKind::Leaf,
+            _ => PageKind::Meta,
+        }
+    }
+
+    pub fn write_kind(&mut self, k: PageKind) {
+        self.buf[8] = match k {
+            PageKind::Meta => 0,
+            PageKind::Internal => 1,
+            PageKind::Leaf => 2,
+        };
+    }
 }

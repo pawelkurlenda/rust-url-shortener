@@ -1,6 +1,6 @@
 use std::{
     fs::{File, OpenOptions},
-    io::Write,
+    io::{Read, Seek, SeekFrom, Write},
     path::Path,
 };
 
@@ -45,7 +45,41 @@ impl Wal {
         Ok(lsn)
     }
 
-    pub fn replay(&self) -> std::io::Result<()> {
-        unimplemented!(); // todo Implement log replay logic here
+    pub fn replay<F: FnMut(u64, Operation, Vec<u8>, Vec<u8>)>(
+        &mut self,
+        mut apply: F,
+    ) -> std::io::Result<()> {
+        // todo write tests
+        let mut hdr = [0u8; 17];
+        loop {
+            match self.file.read_exact(&mut hdr) {
+                Ok(()) => {
+                    let lsn = u64::from_le_bytes(hdr[0..8].try_into().unwrap());
+                    let op = hdr[8];
+                    let klen = u32::from_le_bytes(hdr[9..13].try_into().unwrap()) as usize;
+                    let vlen = u32::from_le_bytes(hdr[13..17].try_into().unwrap()) as usize;
+                    let mut k = vec![0; klen];
+                    let mut v = vec![0; vlen];
+                    if self.file.read_exact(&mut k).is_err() {
+                        break;
+                    }
+                    if self.file.read_exact(&mut v).is_err() {
+                        break;
+                    }
+                    apply(
+                        lsn,
+                        if op == 1 {
+                            Operation::Insert
+                        } else {
+                            Operation::Delete
+                        },
+                        k,
+                        v,
+                    );
+                }
+                Err(_) => break,
+            }
+        }
+        Ok(())
     }
 }

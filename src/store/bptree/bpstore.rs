@@ -1,3 +1,4 @@
+use core::time;
 use std::{
     path::{Path, PathBuf},
     sync::Mutex,
@@ -68,16 +69,13 @@ impl BpStore {
 impl Store for BpStore {
     async fn get(&self, id: &str) -> anyhow::Result<Option<LinkRecord>> {
         let key = ns_link(id);
-        let mut tree = self.tree.lock();
+        let mut tree = self.tree.lock().unwrap();
         if let Some(v) = tree.get(&key)? {
             if v.is_empty() {
                 return Ok(None);
             }
             let rec: LinkRecord = bincode::deserialize(&v)?;
-            let now = time::OffsetDateTime::now_utc();
-            if rec.is_expired(now) {
-                return Ok(None);
-            }
+
             Ok(Some(rec))
         } else {
             Ok(None)
@@ -88,21 +86,21 @@ impl Store for BpStore {
         let key = ns_link(&record.id);
         let val = bincode::serialize(&record)?;
         {
-            let mut wal = self.wal.lock();
+            let mut wal = self.wal.lock().unwrap();
             let _lsn = wal.append(Operation::Insert, &key, &val)?;
         }
-        self.tree.lock().put(key, val)?;
+        self.tree.lock().unwrap().put(key, val)?;
         Ok(())
     }
 
-    async fn delete(&self, id: &str) -> anyhow::Result<bool> {
+    async fn delete(&self, id: &str) -> anyhow::Result<()> {
         let key = ns_link(id);
         {
-            let mut wal = self.wal.lock();
+            let mut wal = self.wal.lock().unwrap();
             let _lsn = wal.append(Operation::Delete, &key, &[])?;
         }
-        self.tree.lock().put(key, Vec::new())?;
-        Ok(true)
+        self.tree.lock().unwrap().put(key, Vec::new())?;
+        Ok(())
     }
 
     async fn incr_hit(&self, id: &str) -> anyhow::Result<()> {
@@ -110,6 +108,7 @@ impl Store for BpStore {
         let cur = self
             .tree
             .lock()
+            .unwrap()
             .get(&key)?
             .map(|v| {
                 if v.is_empty() {
@@ -121,16 +120,16 @@ impl Store for BpStore {
             .unwrap_or(0);
         let next = (cur + 1).to_le_bytes().to_vec();
         {
-            let mut wal = self.wal.lock();
+            let mut wal = self.wal.lock().unwrap();
             let _lsn = wal.append(Operation::Insert, &key, &next)?;
         }
-        self.tree.lock().put(key, next)?;
+        self.tree.lock().unwrap().put(key, next)?;
         Ok(())
     }
 
     async fn get_hits(&self, id: &str) -> anyhow::Result<u64> {
         let key = ns_hit(id);
-        if let Some(v) = self.tree.lock().get(&key)? {
+        if let Some(v) = self.tree.lock().unwrap().get(&key)? {
             if v.is_empty() {
                 Ok(0)
             } else {

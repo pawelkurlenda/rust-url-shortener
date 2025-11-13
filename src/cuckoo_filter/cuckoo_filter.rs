@@ -4,7 +4,7 @@ use std::sync::{Arc, RwLock};
 
 pub struct CuckooFilter<const B: usize> {
     hasher: BuildHasher,
-    array_size: u64,
+    array_size: usize,
     bucket_1: Vec<usize>,
     bucket_2: Vec<usize>,
     build: BuildHasher,
@@ -24,6 +24,7 @@ impl<const B: usize> CuckooFilter<B> {
             array_size: size,
             bucket_1: vec![0; size as usize],
             bucket_2: vec![0; size as usize],
+            buckets: RwLock::new(buckets),
         }
     }
 }

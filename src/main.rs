@@ -2,7 +2,9 @@ use std::{net::SocketAddr, sync::Arc};
 
 use tokio::net::TcpListener;
 
-use crate::{app_state::AppState, cuckoo_filter::CuckooFilter, store::memory::MemoryStore};
+use crate::{
+    app_state::AppState, cuckoo_filter::cuckoo_filter::CuckooFilter, store::memory::MemoryStore,
+};
 
 mod api_error;
 mod app_settings;
@@ -17,6 +19,8 @@ use app_settings::settings;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    app_settings::resolve_settings()?;
+
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
 
     let listener = TcpListener::bind(addr).await?;

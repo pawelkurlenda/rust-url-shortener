@@ -18,3 +18,4 @@ bytes = "1.10.1"
 rand = "0.9.2"
 config = { version = "0.15.18", features = ["toml"] }
 bincode = "1"
+fastrand = "2"

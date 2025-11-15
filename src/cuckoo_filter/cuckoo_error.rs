@@ -1,3 +1,5 @@
+use anyhow::Error;
+
 #[derive(Debug, Error)]
 pub enum CuckooError {
     #[error("invalid capacity (must be > 0)")]

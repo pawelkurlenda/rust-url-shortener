@@ -34,7 +34,7 @@
 pub mod shortcut_generator {
 
     #[inline]
-    pub fn unique_string(id: u64, length: u8) -> String {
+    pub fn create(id: u64, length: u8) -> String {
         const SALT: u64 = 0xD6E8_FEB8_6659_FD93;
         const ALPHABET: &[u8; 62] =
             b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";

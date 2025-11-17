@@ -1,3 +1,4 @@
 # App configuration
 port = 8080
 max_shortened_len = 6
+store_dir = "./data/store"
